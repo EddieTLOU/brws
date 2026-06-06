@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Backrooms</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background: 
+                linear-gradient(rgba(10, 10, 12, 0.75), rgba(0, 0, 0, 0.9)),
+                url('https://i.redd.it/ol6febcwjh871.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1 {
+            color: #ff3333;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+            font-size: 2.8rem;
+            text-align: center;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            max-width: 1100px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .tab {
+            background: rgba(15, 15, 20, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px 24px;
+            color: #8a8a8a;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: rgba(255, 51, 51, 0.2);
+            border-color: #ff3333;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.3);
+        }
+
+        .tab.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+            border-style: dashed;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            gap: 30px;
+            max-width: 1100px;
+            width: 100%;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .glass-panel {
+            background: rgba(10, 10, 15, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(15, 38px);
+            grid-template-rows: repeat(15, 38px);
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 51, 51, 0.2);
+            cursor: pointer;
+        }
+
+        .cell {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.1s, color 0.1s;
+            color: #bcbcbc;
+        }
+
+        .cell.selecting {
+            background: rgba(255, 51, 51, 0.35);
+            border-color: #ff3333;
+            color: #fff;
+        }
+
+        .cell.found {
+            background: rgba(51, 255, 119, 0.2);
+            border-color: #33ff77;
+            color: #33ff77;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 320px;
+        }
+
+        .word-list-title {
+            font-size: 1.1rem;
+            color: #ff3333;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 51, 51, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .word-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .word-item {
+            font-size: 0.95rem;
+            color: #a5a5a5;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .word-item.found {
+            color: #33ff77;
+            text-decoration: line-through;
+            opacity: 0.5;
+            text-shadow: 0 0 5px rgba(51, 255, 119, 0.3);
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .sidebar {
+                width: 100%;
+                max-width: 630px;
+            }
+            .grid-container {
+                grid-template-columns: repeat(15, 24px);
+                grid-template-rows: repeat(15, 24px);
+                gap: 2px;
+                padding: 6px;
+            }
+            .cell {
+                width: 24px;
+                height: 24px;
+                font-size: 0.75rem;
+            }
+            .tabs {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>The Backrooms</h1>
+
+    <div class="tabs" id="tabs-container">
+        <div class="tab active" data-level="0">Level 0: The Lobby</div>
+        <div class="tab locked" data-level="1" id="tab-1">Level 1: Habitable Zone</div>
+        <div class="tab locked" data-level="2" id="tab-2">Level 2: Pipe Dreams</div>
+    </div>
+
+    <div class="main-container">
+        <div class="glass-panel">
+            <div class="grid-container" id="grid"></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="glass-panel" style="width: 100%;">
+                <div class="word-list-title">Target Signatures</div>
+                <ul class="word-list" id="word-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const levelData = {
+            0: {
+                words: ["LEVELZERO", "NOCLIP", "ALMONDWATER", "ENTITY", "HOUND", "WANDERER", "BUZZING", "YELLOW", "WALLPAPER", "CARPET"],
+                unlocked: true,
+                completed: false
+            },
+            1: {
+                words: ["LEVELONE", "CORRIDORS", "LIGHTS", "CONCRETE", "FOG", "WATER", "PIPES", "AGGRESSIVE", "BASEMENT", "VENTILATION"],
+                unlocked: false,
+                completed: false
+            },
+            2: {
+                words: ["LEVELTWO", "STEAM", "INDUSTRIAL", "HEAT", "BOILER", "SMOKE", "SHADOW", "TRAPPED", "ESCAPE", "DARKNESS"],
+                unlocked: false,
+                completed: false
+            }
+        };
+
+        const GRID_SIZE = 15;
+        let currentLevel = 0;
+        let matrix = [];
+        let placementMap = []; 
+        let isSelecting = false;
+        let startCell = null;
+        let currentSelectingCells = [];
+
+        const gridElement = document.getElementById('grid');
+        const wordListElement = document.getElementById('word-list');
+        const tabsContainer = document.getElementById('tabs-container');
+
+        const directions = [
+            [0, 1],   
+            [1, 0],   
+            [1, 1],   
+            [-1, 1],  
+            [0, -1],  
+            [-1, 0],  
+            [-1, -1], 
+            [1, -1]   
+        ];
+
+        function generatePuzzle(levelId) {
+            matrix = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(''));
+            placementMap = [];
+            
+            const words = [...levelData[levelId].words].sort((a, b) => b.length - a.length);
+
+            words.forEach(word => {
+                let placed = false;
+                let attempts = 0;
+
+                while (!placed && attempts < 200) {
+                    const dir = directions[Math.floor(Math.random() * directions.length)];
+                    const row = Math.floor(Math.random() * GRID_SIZE);
+                    const col = Math.floor(Math.random() * GRID_SIZE);
+
+                    if (canPlaceWord(word, row, col, dir)) {
+                        const coords = placeWord(word, row, col, dir);
+                        placementMap.push({ word: word, cells: coords, found: false });
+                        placed = true;
+                    }
+                    attempts++;
+                }
+            });
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (matrix[r][c] === '') {
+                        matrix[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                    }
+                }
+            }
+
+            renderGrid();
+            renderWordList(levelId);
+        }
+
+        function canPlaceWord(word, row, col, dir) {
+            let r = row;
+            let c = col;
+
+            for (let i = 0; i < word.length; i++) {
+                if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) return false;
+                if (matrix[r][c] !== '' && matrix[r][c] !== word[i]) return false;
+                r += dir[0];
+                c += dir[1];
+            }
+            return true;
+        }
+
+        function placeWord(word, row, col, dir) {
+            let r = row;
+            let c = col;
+            const coords = [];
+
+            for (let i = 0; i < word.length; i++) {
+                matrix[r][c] = word[i];
+                coords.push(`${r}-${c}`);
+                r += dir[0];
+                c += dir[1];
+            }
+            return coords;
+        }
+
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.textContent = matrix[r][c];
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    cell.dataset.id = `${r}-${c}`;
+
+                    cell.addEventListener('mousedown', handleMouseDown);
+                    cell.addEventListener('mouseenter', handleMouseEnter);
+
+                    gridElement.appendChild(cell);
+                }
+            }
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+
+        function renderWordList(levelId) {
+            wordListElement.innerHTML = '';
+            levelData[levelId].words.forEach(word => {
+                const li = document.createElement('li');
+                li.classList.add('word-item');
+                li.id = `word-${word}`;
+                li.textContent = word;
+                wordListElement.appendChild(li);
+            });
+        }
+
+        function handleMouseDown(e) {
+            isSelecting = true;
+            startCell = e.target;
+            selectCell(startCell);
+        }
+
+        function handleMouseEnter(e) {
+            if (!isSelecting || !startCell) return;
+            calculateSelection(startCell, e.target);
+        }
+
+        function handleMouseUp() {
+            if (!isSelecting) return;
+            isSelecting = false;
+
+            checkSelectedWord();
+            clearSelecting();
+            startCell = null;
+        }
+
+        function selectCell(cell) {
+            if (!cell.classList.contains('cell')) return;
+            cell.classList.add('selecting');
+            currentSelectingCells.push(cell);
+        }
+
+        function clearSelecting() {
+            currentSelectingCells.forEach(cell => cell.classList.remove('selecting'));
+            currentSelectingCells = [];
+        }
+
+        function calculateSelection(start, end) {
+            clearSelecting();
+
+            const r1 = parseInt(start.dataset.r);
+            const c1 = parseInt(start.dataset.c);
+            const r2 = parseInt(end.dataset.r);
+            const c2 = parseInt(end.dataset.c);
+
+            const dr = r2 - r1;
+            const dc = c2 - c1;
+
+            let stepR = 0;
+            let stepC = 0;
+
+            if (dr === 0 && dc !== 0) {
+                stepC = dc > 0 ? 1 : -1;
+            } else if (dc === 0 && dr !== 0) {
+                stepR = dr > 0 ? 1 : -1;
+            } else if (Math.abs(dr) === Math.abs(dc) && dr !== 0) {
+                stepR = dr > 0 ? 1 : -1;
+                stepC = dc > 0 ? 1 : -1;
+            } else {
+                selectCell(start);
+                return;
+            }
+
+            let currR = r1;
+            let currC = c1;
+            const limit = Math.max(Math.abs(dr), Math.abs(dc)) + 1;
+
+            for (let i = 0; i < limit; i++) {
+                const cell = document.querySelector(`[data-id="${currR}-${currC}"]`);
+                if (cell) selectCell(cell);
+                currR += stepR;
+                currC += stepC;
+            }
+        }
+
+        function checkSelectedWord() {
+            const selectedIds = currentSelectingCells.map(c => c.dataset.id);
+            
+            placementMap.forEach(item => {
+                if (item.found) return;
+
+                const matchForward = item.cells.length === selectedIds.length && item.cells.every((val, index) => val === selectedIds[index]);
+                const matchBackward = item.cells.length === selectedIds.length && [...item.cells].reverse().every((val, index) => val === selectedIds[index]);
+
+                if (matchForward || matchBackward) {
+                    item.found = true;
+                    document.getElementById(`word-${item.word}`).classList.add('found');
+                    
+                    item.cells.forEach(id => {
+                        document.querySelector(`[data-id="${id}"]`).classList.add('found');
+                    });
+                }
+            });
+
+            checkLevelCompletion();
+        }
+
+        function checkLevelCompletion() {
+            const allFound = placementMap.every(item => item.found);
+            if (allFound) {
+                levelData[currentLevel].completed = true;
+                const nextLevel = currentLevel + 1;
+                if (levelData[nextLevel]) {
+                    levelData[nextLevel].unlocked = true;
+                    const nextTab = document.getElementById(`tab-${nextLevel}`);
+                    if (nextTab) nextTab.classList.remove('locked');
+                }
+            }
+        }
+
+        tabsContainer.addEventListener('click', (e) => {
+            const targetTab = e.target.closest('.tab');
+            if (!targetTab || targetTab.classList.contains('locked')) return;
+
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            targetTab.classList.add('active');
+
+            currentLevel = parseInt(targetTab.dataset.level);
+            generatePuzzle(currentLevel);
+        });
+
+        generatePuzzle(0);
+    </script>
+</body>
+</html>
