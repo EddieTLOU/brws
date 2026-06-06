@@ -13,10 +13,6 @@
         }
 
         body {
-            background: 
-                linear-gradient(rgba(10, 10, 12, 0.75), rgba(0, 0, 0, 0.9)),
-                url('https://i.redd.it/ol6febcwjh871.png') no-repeat center center fixed;
-            background-size: cover;
             color: #e0e0e0;
             min-height: 100vh;
             display: flex;
@@ -25,6 +21,34 @@
             padding: 20px;
             overflow-x: hidden;
             user-select: none;
+            position: relative;
+        }
+
+        #bg-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: linear-gradient(rgba(10, 10, 12, 0.7), rgba(0, 0, 0, 0.9));
+        }
+
+        body.zoom-active #bg-layer {
+            transform: scale(1.15);
         }
 
         h1 {
@@ -93,6 +117,11 @@
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+
+        .grid-wrapper {
+            position: relative;
         }
 
         .grid-container {
@@ -129,9 +158,35 @@
         }
 
         .cell.found {
-            background: rgba(51, 255, 119, 0.2);
-            border-color: #33ff77;
             color: #33ff77;
+            text-shadow: 0 0 5px rgba(51, 255, 119, 0.5);
+        }
+
+        .drawing-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .pencil-line {
+            stroke: #33ff77;
+            stroke-width: 4;
+            stroke-linecap: round;
+            fill: none;
+            filter: drop-shadow(0px 0px 4px rgba(51, 255, 119, 0.8));
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawPencilLine 0.8s ease-out forwards;
+        }
+
+        @keyframes drawPencilLine {
+            to {
+                stroke-dashoffset: 0;
+            }
         }
 
         .sidebar {
@@ -202,6 +257,9 @@
 </head>
 <body>
 
+    <div id="bg-layer"></div>
+    <div id="bg-overlay"></div>
+
     <h1>The Backrooms</h1>
 
     <div class="tabs" id="tabs-container">
@@ -212,7 +270,10 @@
 
     <div class="main-container">
         <div class="glass-panel">
-            <div class="grid-container" id="grid"></div>
+            <div class="grid-wrapper">
+                <div class="grid-container" id="grid"></div>
+                <svg class="drawing-layer" id="drawing-layer"></svg>
+            </div>
         </div>
 
         <div class="sidebar">
@@ -227,16 +288,19 @@
         const levelData = {
             0: {
                 words: ["LEVELZERO", "NOCLIP", "ALMONDWATER", "ENTITY", "HOUND", "WANDERER", "BUZZING", "YELLOW", "WALLPAPER", "CARPET"],
+                bg: "zero.png",
                 unlocked: true,
                 completed: false
             },
             1: {
                 words: ["LEVELONE", "CORRIDORS", "LIGHTS", "CONCRETE", "FOG", "WATER", "PIPES", "AGGRESSIVE", "BASEMENT", "VENTILATION"],
+                bg: "one.png",
                 unlocked: false,
                 completed: false
             },
             2: {
                 words: ["LEVELTWO", "STEAM", "INDUSTRIAL", "HEAT", "BOILER", "SMOKE", "SHADOW", "TRAPPED", "ESCAPE", "DARKNESS"],
+                bg: "two.png",
                 unlocked: false,
                 completed: false
             }
@@ -253,6 +317,8 @@
         const gridElement = document.getElementById('grid');
         const wordListElement = document.getElementById('word-list');
         const tabsContainer = document.getElementById('tabs-container');
+        const drawingLayer = document.getElementById('drawing-layer');
+        const bgLayer = document.getElementById('bg-layer');
 
         const directions = [
             [0, 1],   
@@ -265,9 +331,14 @@
             [1, -1]   
         ];
 
+        function changeBackground(levelId) {
+            bgLayer.style.backgroundImage = `url('${levelData[levelId].bg}')`;
+        }
+
         function generatePuzzle(levelId) {
             matrix = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(''));
             placementMap = [];
+            drawingLayer.innerHTML = '';
             
             const words = [...levelData[levelId].words].sort((a, b) => b.length - a.length);
 
@@ -299,6 +370,7 @@
 
             renderGrid();
             renderWordList(levelId);
+            changeBackground(levelId);
         }
 
         function canPlaceWord(word, row, col, dir) {
@@ -428,8 +500,39 @@
             }
         }
 
+        function drawPencilLineBetween(startId, endId) {
+            const firstCell = document.querySelector(`[data-id="${startId}"]`);
+            const lastCell = document.querySelector(`[data-id="${endId}"]`);
+
+            if (!firstCell || !lastCell) return;
+
+            const x1 = firstCell.offsetLeft + (firstCell.offsetWidth / 2);
+            const y1 = firstCell.offsetTop + (firstCell.offsetHeight / 2);
+            const x2 = lastCell.offsetLeft + (lastCell.offsetWidth / 2);
+            const y2 = lastCell.offsetTop + (lastCell.offsetHeight / 2);
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1);
+            line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2);
+            line.setAttribute("y2", y2);
+            line.classList.add("pencil-line");
+
+            const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            line.style.strokeDasharray = length;
+            line.style.strokeDashoffset = length;
+
+            drawingLayer.appendChild(line);
+
+            document.body.classList.add('zoom-active');
+            setTimeout(() => {
+                document.body.classList.remove('zoom-active');
+            }, 800);
+        }
+
         function checkSelectedWord() {
             const selectedIds = currentSelectingCells.map(c => c.dataset.id);
+            if (selectedIds.length === 0) return;
             
             placementMap.forEach(item => {
                 if (item.found) return;
@@ -444,6 +547,8 @@
                     item.cells.forEach(id => {
                         document.querySelector(`[data-id="${id}"]`).classList.add('found');
                     });
+
+                    drawPencilLineBetween(item.cells[0], item.cells[item.cells.length - 1]);
                 }
             });
 
